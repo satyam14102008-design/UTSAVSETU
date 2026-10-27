@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
@@ -47,7 +47,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
-// Main Authenticated Dashboard Shell Layout
+// Main Authenticated Dashboard Shell Layout with Outlet
 const DashboardLayout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -64,21 +64,7 @@ const DashboardLayout: React.FC = () => {
         />
         <main className="flex-1 overflow-x-hidden p-4 md:p-8">
           <div className="max-w-7xl mx-auto">
-            <Routes>
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/events" element={<EventsListPage />} />
-              <Route path="/events/create" element={<CreateEventWizard />} />
-              <Route path="/invitation-studio" element={<InvitationStudioPage />} />
-              <Route path="/guests" element={<GuestsPage />} />
-              <Route path="/whatsapp" element={<InvitationsWhatsAppPage />} />
-              <Route path="/rsvp-tracking" element={<RSVPTrackingPage />} />
-              <Route path="/budget" element={<BudgetPlanningPage />} />
-              <Route path="/attendance" element={<AttendanceCheckInPage />} />
-              <Route path="/smart-assist" element={<SmartAssistPage />} />
-              <Route path="/reports" element={<ReportsPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+            <Outlet />
           </div>
         </main>
       </div>
@@ -95,95 +81,27 @@ export const App: React.FC = () => {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/rsvp/:token" element={<PublicRSVPPage />} />
 
-      {/* Protected Dashboard Routes */}
+      {/* Protected Dashboard Routes using React Router Outlet */}
       <Route
-        path="/dashboard/*"
         element={
           <ProtectedRoute>
             <DashboardLayout />
           </ProtectedRoute>
         }
-      />
-      <Route
-        path="/events/*"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/invitation-studio"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/guests"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/whatsapp"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/rsvp-tracking"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/budget"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/attendance"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/smart-assist"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/reports"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      />
+      >
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/events" element={<EventsListPage />} />
+        <Route path="/events/create" element={<CreateEventWizard />} />
+        <Route path="/invitation-studio" element={<InvitationStudioPage />} />
+        <Route path="/guests" element={<GuestsPage />} />
+        <Route path="/whatsapp" element={<InvitationsWhatsAppPage />} />
+        <Route path="/rsvp-tracking" element={<RSVPTrackingPage />} />
+        <Route path="/budget" element={<BudgetPlanningPage />} />
+        <Route path="/attendance" element={<AttendanceCheckInPage />} />
+        <Route path="/smart-assist" element={<SmartAssistPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+      </Route>
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -192,4 +110,3 @@ export const App: React.FC = () => {
 };
 
 export default App;
-
