@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#FAF7F2] text-[#2D2D2D] antialiased selection:bg-[#D4AF37] selection:text-white min-h-screen;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, .font-serif {
+    font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
+  }
+}
+
+/* Indian Ornate Motifs & Card Borders */
+.ornate-gold-border {
+  border: 4px double #D4AF37;
+  box-shadow: inset 0 0 15px rgba(212, 175, 55, 0.2), 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.royal-arch-border {
+  border: 3px solid #D4AF37;
+  border-top-left-radius: 40px;
+  border-top-right-radius: 40px;
+}
+
+.floral-wreath-border {
+  border: 2px dashed #F472B6;
+  border-radius: 20px;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FAF7F2;
+}
+::-webkit-scrollbar-thumb {
+  background: #D4AF37;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #800020;
+}
+
