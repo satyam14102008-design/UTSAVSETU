@@ -1,6 +1,9 @@
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from backend.app.config import settings
 from backend.app.database import db_manager
 from backend.app.services.seed_data import seed_demo_data
@@ -65,13 +68,34 @@ def health_check():
         "whatsapp_mode": "cloud_api" if settings.WHATSAPP_API_TOKEN else "demo_mode"
     }
 
-@app.get("/")
-def root():
-    return {
-        "platform": "UtsavSetu — AI-Powered Indian Event Management Platform",
-        "tagline": "One platform. Every celebration. A customized experience for each event.",
-        "api_docs": "/docs",
-        "health": "/health",
-        "demo_user": "demo@utsavsetu.com / password123"
-    }
+# Frontend SPA Static Files Serving
+frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
+
+if os.path.exists(frontend_dist) and os.path.exists(os.path.join(frontend_dist, "index.html")):
+    assets_dir = os.path.join(frontend_dist, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # Skip API, docs, or health routes
+        if full_path.startswith("api/") or full_path == "docs" or full_path == "openapi.json" or full_path == "health":
+            return {"error": "Not found"}
+        
+        file_path = os.path.join(frontend_dist, full_path)
+        if full_path and os.path.exists(file_path) and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        
+        return FileResponse(os.path.join(frontend_dist, "index.html"))
+else:
+    @app.get("/")
+    def root():
+        return {
+            "platform": "UtsavSetu — AI-Powered Indian Event Management Platform",
+            "tagline": "One platform. Every celebration. A customized experience for each event.",
+            "api_docs": "/docs",
+            "health": "/health",
+            "demo_user": "demo@utsavsetu.com / password123"
+        }
+
 
