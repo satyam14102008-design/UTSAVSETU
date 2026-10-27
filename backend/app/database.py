@@ -257,32 +257,59 @@ class DatabaseManager:
         import socket
         import pymongo
         
-        # Fast socket check before PyMongo connection attempt
+        is_remote_mongo = "mongodb+srv://" in settings.MONGODB_URI or ("localhost" not in settings.MONGODB_URI and "127.0.0.1" not in settings.MONGODB_URI)
         mongo_available = False
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(0.2)
-                res = s.connect_ex(("127.0.0.1", 27017))
-                if res == 0:
-                    mongo_available = True
-        except Exception:
-            mongo_available = False
 
-        if mongo_available and not os.getenv("FORCE_LOCAL_STORAGE"):
+        if is_remote_mongo and not os.getenv("FORCE_LOCAL_STORAGE"):
             try:
-                client = pymongo.MongoClient(settings.MONGODB_URI, serverSelectionTimeoutMS=1000)
+                client = pymongo.MongoClient(settings.MONGODB_URI, serverSelectionTimeoutMS=3000)
                 client.server_info()
                 self.client = client
                 self.db = client[settings.DB_NAME]
                 self.is_connected_to_mongo = True
-                self.mode = "mongodb"
-                logger.info(f"Connected to production MongoDB at {settings.MONGODB_URI}")
+                self.mode = "mongodb_atlas"
+                logger.info(f"Connected to remote MongoDB at {settings.MONGODB_URI}")
                 return
             except Exception as e:
-                logger.warning(f"Mongo port was open but handshake failed ({e}). Falling back.")
+                logger.warning(f"Remote MongoDB connection failed ({e}). Falling back to local.")
+        else:
+            # Fast socket check before PyMongo local connection attempt
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(0.2)
+                    res = s.connect_ex(("127.0.0.1", 27017))
+                    if res == 0:
+                        mongo_available = True
+            except Exception:
+                mongo_available = False
+
+            if mongo_available and not os.getenv("FORCE_LOCAL_STORAGE"):
+                try:
+                    client = pymongo.MongoClient(settings.MONGODB_URI, serverSelectionTimeoutMS=1000)
+                    client.server_info()
+                    self.client = client
+                    self.db = client[settings.DB_NAME]
+                    self.is_connected_to_mongo = True
+                    self.mode = "mongodb"
+                    logger.info(f"Connected to local MongoDB at {settings.MONGODB_URI}")
+                    return
+                except Exception as e:
+                    logger.warning(f"Local Mongo port was open but handshake failed ({e}). Falling back.")
 
         # Fallback to local persistent document store
-        data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".data")
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        data_dir = os.path.join(base_dir, ".data")
+        # In read-only serverless environments (e.g. AWS Lambda / Vercel), fallback to /tmp/.data
+        try:
+            os.makedirs(data_dir, exist_ok=True)
+            test_file = os.path.join(data_dir, ".write_test")
+            with open(test_file, "w") as f:
+                f.write("ok")
+            os.remove(test_file)
+        except (OSError, PermissionError):
+            data_dir = os.path.join("/tmp", ".data")
+            os.makedirs(data_dir, exist_ok=True)
+
         self.db = LocalDatabase(data_dir)
         self.is_connected_to_mongo = False
         self.mode = "local_document_store"
