@@ -35,9 +35,8 @@ export const ShareModal: React.FC<Props> = ({
 
   // Base URL calculation (works on localhost and production Vercel)
   const origin = window.location.origin;
-  const inviteLink = rsvpToken
-    ? `${origin}/rsvp/${rsvpToken}`
-    : `${origin}/rsvp/rsvp-token-vikram-001`; // demo fallback or general RSVP link
+  const targetToken = rsvpToken || event?.id || 'token_verma_wedding_2026';
+  const inviteLink = `${origin}/rsvp/${targetToken}`;
 
   const greeting = guestName ? `Namaste ${guestName} Ji!` : 'Namaste!';
 
