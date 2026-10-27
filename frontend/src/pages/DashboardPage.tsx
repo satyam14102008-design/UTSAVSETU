@@ -18,8 +18,10 @@ import {
   AlertCircle,
   Sparkles,
   ArrowRight,
-  ListTodo
+  ListTodo,
+  Share2
 } from 'lucide-react';
+import { ShareModal } from '../components/ShareModal';
 import {
   PieChart,
   Pie,
@@ -38,6 +40,7 @@ export const DashboardPage: React.FC = () => {
   const [analytics, setAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [checklist, setChecklist] = useState<Array<{ text: string; done: boolean }>>([]);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   useEffect(() => {
     if (activeEvent) {
@@ -133,6 +136,12 @@ export const DashboardPage: React.FC = () => {
 
         {/* Quick Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setShowShareModal(true)}
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-amber-500 hover:from-amber-500 hover:to-amber-600 text-stone-900 text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+          >
+            <Share2 className="w-3.5 h-3.5" /> Share on Apps
+          </button>
           <Link
             to="/invitation-studio"
             className="px-3.5 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#F4ECE1] text-[#800020] border border-[#D4AF37]/40 text-xs font-bold flex items-center gap-1.5 transition"
@@ -400,6 +409,15 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Share Modal */}
+      {activeEvent && (
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          event={activeEvent}
+        />
+      )}
     </div>
   );
 };

@@ -5,6 +5,7 @@ import { ApiService } from '../services/api';
 import { CardDesign, CardTemplate } from '../types';
 import { CardPreview } from '../components/CardPreview';
 import { QRModal } from '../components/QRModal';
+import { ShareModal } from '../components/ShareModal';
 import {
   Palette,
   Sparkles,
@@ -31,6 +32,7 @@ export const InvitationStudioPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'content' | 'style' | 'templates'>('content');
   const [showQrModal, setShowQrModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   useEffect(() => {
     if (activeEvent) {
@@ -136,6 +138,12 @@ export const InvitationStudioPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setShowShareModal(true)}
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-amber-500 hover:from-amber-500 hover:to-amber-600 text-stone-900 text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+          >
+            <Share2 className="w-4 h-4 text-stone-900" /> Share on WhatsApp & Apps
+          </button>
           <button
             onClick={() => setShowQrModal(true)}
             className="px-3.5 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
@@ -591,6 +599,13 @@ export const InvitationStudioPage: React.FC = () => {
         token="sample-qr-token"
         guestName={activeEvent.title}
         eventTitle={activeEvent.title}
+      />
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        event={activeEvent}
       />
     </div>
   );

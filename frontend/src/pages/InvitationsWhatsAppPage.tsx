@@ -14,8 +14,10 @@ import {
   AlertCircle,
   FileText,
   Users,
-  Settings
+  Settings,
+  Share2
 } from 'lucide-react';
+import { ShareModal } from '../components/ShareModal';
 
 export const InvitationsWhatsAppPage: React.FC = () => {
   const { activeEvent } = useEvent();
@@ -28,6 +30,7 @@ export const InvitationsWhatsAppPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [sendingBulk, setSendingBulk] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [shareTarget, setShareTarget] = useState<{ guestName?: string; rsvpToken?: string } | null>(null);
 
   const loadData = async () => {
     if (!activeEvent) return;
@@ -53,15 +56,23 @@ export const InvitationsWhatsAppPage: React.FC = () => {
   const handleSendSingle = async (assignment: EventGuestAssignment) => {
     if (!activeEvent) return;
     try {
-      const res = await ApiService.sendSingleWhatsApp(
+      await ApiService.sendSingleWhatsApp(
         activeEvent.id,
         assignment.id,
         selectedTemplate,
         customNote,
         true // Demo mode
       );
-      showToast(`Simulated WhatsApp delivered to ${assignment.family_name}!`, 'success');
+      showToast(`Invited ${assignment.family_name}! Opening WhatsApp...`, 'success');
       loadData();
+
+      // Open WhatsApp directly for user with pre-filled ceremonial invitation
+      const cleanDigits = assignment.phone.replace(/[^0-9]/g, '');
+      const formattedPhone = cleanDigits.length === 10 ? `91${cleanDigits}` : cleanDigits;
+      const sampleUrl = `${window.location.origin}/rsvp/${assignment.rsvp_token}`;
+      const prefilledMsg = `Namaste ${assignment.primary_name} ji! 🙏✨\n\nYou and your family are warmly invited to:\n*${activeEvent.title}*\n\n📅 Date: ${activeEvent.date}\n📍 Venue: ${activeEvent.venue_name}\n\nPlease confirm your attendance & meal preferences here:\n👉 ${sampleUrl}`;
+      const waUrl = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(prefilledMsg)}`;
+      window.open(waUrl, '_blank');
     } catch (err: any) {
       showToast(err.message || 'Dispatch failed', 'error');
     }
@@ -126,14 +137,22 @@ export const InvitationsWhatsAppPage: React.FC = () => {
             </h1>
           </div>
 
-          <button
-            onClick={handleSendBulk}
-            disabled={sendingBulk}
-            className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-2 shadow-md transition cursor-pointer self-start sm:self-auto"
-          >
-            <Send className="w-4 h-4" />
-            {sendingBulk ? 'Broadcasting...' : `Broadcast to ${awaitingCount} Awaiting Guests`}
-          </button>
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={() => setShareTarget({ guestName: '', rsvpToken: '' })}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#D4AF37] to-amber-500 hover:from-amber-500 hover:to-amber-600 text-stone-900 text-xs font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+            >
+              <Share2 className="w-4 h-4 text-stone-900" /> Share on WhatsApp, Insta & Apps
+            </button>
+            <button
+              onClick={handleSendBulk}
+              disabled={sendingBulk}
+              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-2 shadow-md transition cursor-pointer"
+            >
+              <Send className="w-4 h-4" />
+              {sendingBulk ? 'Broadcasting...' : `Broadcast to ${awaitingCount} Awaiting Guests`}
+            </button>
+          </div>
         </div>
 
         {/* Clear Demo Mode Disclaimer */}
@@ -201,10 +220,11 @@ export const InvitationsWhatsAppPage: React.FC = () => {
 
           <div className="max-h-[500px] overflow-y-auto divide-y divide-stone-100">
             {assignments.map((a) => {
-              const cleanP = a.phone.replace(/[^0-9]/g, '');
+              const cleanDigits = a.phone.replace(/[^0-9]/g, '');
+              const formattedPhone = cleanDigits.length === 10 ? `91${cleanDigits}` : cleanDigits;
               const sampleUrl = `${window.location.origin}/rsvp/${a.rsvp_token}`;
               const prefilledMsg = `Namaste ${a.primary_name} ji! 🙏✨\n\nYou and your family are warmly invited to:\n*${activeEvent.title}*\n\n📅 Date: ${activeEvent.date}\n📍 Venue: ${activeEvent.venue_name}\n\nPlease confirm your attendance & meal preferences here:\n👉 ${sampleUrl}`;
-              const waMeLink = `https://wa.me/${cleanP}?text=${encodeURIComponent(prefilledMsg)}`;
+              const waLink = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(prefilledMsg)}`;
 
               return (
                 <div key={a.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-stone-50/60 p-2 rounded-2xl transition">
@@ -220,7 +240,16 @@ export const InvitationsWhatsAppPage: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Share Modal Trigger */}
+                    <button
+                      onClick={() => setShareTarget({ guestName: a.primary_name, rsvpToken: a.rsvp_token })}
+                      className="px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-800 text-[11px] font-bold flex items-center gap-1 transition cursor-pointer"
+                      title="Share on WhatsApp, Insta, Telegram"
+                    >
+                      <Share2 className="w-3.5 h-3.5" /> Share
+                    </button>
+
                     {/* Copy message */}
                     <button
                       onClick={() => copyMessageText(prefilledMsg, a.id)}
@@ -231,9 +260,9 @@ export const InvitationsWhatsAppPage: React.FC = () => {
                       {copiedId === a.id ? 'Copied' : 'Copy'}
                     </button>
 
-                    {/* Real wa.me button */}
+                    {/* Real WhatsApp button */}
                     <a
-                      href={waMeLink}
+                      href={waLink}
                       target="_blank"
                       rel="noreferrer"
                       className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-[11px] font-bold flex items-center gap-1.5 transition"
@@ -301,6 +330,17 @@ export const InvitationsWhatsAppPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Share Modal */}
+      {shareTarget && (
+        <ShareModal
+          isOpen={!!shareTarget}
+          onClose={() => setShareTarget(null)}
+          event={activeEvent}
+          guestName={shareTarget.guestName}
+          rsvpToken={shareTarget.rsvpToken}
+        />
+      )}
     </div>
   );
 };
