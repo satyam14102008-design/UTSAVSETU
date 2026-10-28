@@ -228,7 +228,15 @@ All 12 test suites execute in seconds:
 
 ---
 
+## 👨‍💻 Creator & Developer
+
+**Satyam Rai**  
+- **GitHub**: [https://github.com/satyam14102008-design](https://github.com/satyam14102008-design)  
+- **LinkedIn**: [https://www.linkedin.com/in/satyam-rai-65a298386/](https://www.linkedin.com/in/satyam-rai-65a298386/)
+
+---
+
 ## 📄 License & Credits
-Built with devotion for Indian families celebrating life's most precious milestones.
-Developed by the UtsavSetu engineering team.
+Built with devotion for Indian families celebrating life's most precious milestones.  
+Designed and engineered by **Satyam Rai**.
 

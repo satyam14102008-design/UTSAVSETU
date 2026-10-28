@@ -22,7 +22,9 @@ import {
   Users,
   Flower2,
   Flame,
-  ChevronDown
+  ChevronDown,
+  Github,
+  Linkedin
 } from 'lucide-react';
 
 export const PublicRSVPPage: React.FC = () => {
@@ -726,10 +728,33 @@ export const PublicRSVPPage: React.FC = () => {
           </form>
         </div>
 
-        {/* Footer info */}
-        <p className="text-center text-[11px] text-stone-400">
-          Powered by <b>UtsavSetu (उत्सवसेतु)</b> • Beautiful Indian Celebrations
-        </p>
+        {/* Footer info & Creator Credit */}
+        <div className="text-center space-y-2 text-[11px] text-stone-500 pt-2 pb-6">
+          <p>
+            Powered by <b className="text-stone-700">UtsavSetu (उत्सवसेतु)</b> • Crafted with pride by <b className="text-[#800020]">Satyam Rai</b>
+          </p>
+          <div className="flex items-center justify-center gap-3 text-stone-500 text-xs">
+            <a
+              href="https://github.com/satyam14102008-design"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-stone-900 flex items-center gap-1 transition"
+            >
+              <Github className="w-3.5 h-3.5 text-stone-600" />
+              <span>GitHub</span>
+            </a>
+            <span>•</span>
+            <a
+              href="https://www.linkedin.com/in/satyam-rai-65a298386/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#0A66C2] flex items-center gap-1 transition"
+            >
+              <Linkedin className="w-3.5 h-3.5 text-[#0A66C2]" />
+              <span>LinkedIn</span>
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );

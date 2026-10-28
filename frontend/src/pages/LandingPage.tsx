@@ -22,7 +22,9 @@ import {
   Flower2,
   TrendingDown,
   PartyPopper,
-  MessageCircle
+  MessageCircle,
+  Github,
+  Linkedin
 } from 'lucide-react';
 
 export const LandingPage: React.FC = () => {
@@ -150,11 +152,38 @@ export const LandingPage: React.FC = () => {
       </button>
 
       {/* Top Auspicious Notice Bar with Shimmer */}
-      <div className="bg-[#800020] text-[#D4AF37] px-4 py-2.5 text-center text-xs font-semibold flex items-center justify-center gap-2 border-b border-[#D4AF37]/30 shadow-xs relative overflow-hidden">
+      <div className="bg-[#800020] text-[#D4AF37] px-4 py-2 text-center text-xs font-semibold flex flex-wrap items-center justify-between gap-3 border-b border-[#D4AF37]/30 shadow-xs relative overflow-hidden">
         <div className="absolute inset-0 shimmer-gold-border opacity-20 pointer-events-none" />
-        <span className="animate-diya">🪔</span>
-        <span>One Platform. Every Celebration. Dedicated Indian Event Management SaaS.</span>
-        <span className="hidden sm:inline text-white/80 font-normal">• Reduce Food Waste & Overspending</span>
+        <div className="flex items-center gap-2 mx-auto sm:mx-0">
+          <span className="animate-diya">🪔</span>
+          <span>One Platform. Every Celebration. Dedicated Indian Event Management SaaS.</span>
+          <span className="hidden md:inline text-white/80 font-normal">• Reduce Food Waste & Overspending</span>
+        </div>
+        <div className="flex items-center gap-2.5 mx-auto sm:mx-0 text-white/90 text-xs">
+          <span>Created with pride by <strong className="text-amber-300 font-serif">Satyam Rai</strong></span>
+          <span className="text-white/40">|</span>
+          <a
+            href="https://github.com/satyam14102008-design"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-amber-300 transition flex items-center gap-1 text-stone-200 hover:scale-105"
+            title="Satyam Rai on GitHub"
+          >
+            <Github className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline text-[11px]">GitHub</span>
+          </a>
+          <span className="text-white/40">•</span>
+          <a
+            href="https://www.linkedin.com/in/satyam-rai-65a298386/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-sky-300 transition flex items-center gap-1 text-sky-200 hover:scale-105"
+            title="Satyam Rai on LinkedIn"
+          >
+            <Linkedin className="w-3.5 h-3.5 text-[#0A66C2]" />
+            <span className="hidden sm:inline text-[11px]">LinkedIn</span>
+          </a>
+        </div>
       </div>
 
       {/* HERO SECTION WITH 3D INTERACTIVE CARD SHOWCASE */}
@@ -170,7 +199,7 @@ export const LandingPage: React.FC = () => {
               <span className="animate-diya">🪔</span>
               <span>उत्सवसेतु • UTSAVSETU</span>
               <span className="text-stone-400">•</span>
-              <span className="text-[#D4AF37] font-semibold">AI Event Suite</span>
+              <span className="text-[#800020] font-semibold">Crafted by Satyam Rai</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-stone-900 font-serif leading-[1.15]">
@@ -499,13 +528,61 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* FOOTER */}
-      <footer className="py-8 bg-stone-900 text-stone-400 text-center text-xs border-t border-stone-800">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p>© 2026 UtsavSetu (उत्सवसेतु). AI-Powered Indian Event, Invitation & Guest Management.</p>
-          <div className="flex gap-4">
-            <Link to="/login" className="hover:text-white transition">Sign In</Link>
-            <Link to="/register" className="hover:text-white transition">Register</Link>
-            <button onClick={demoLogin} className="hover:text-amber-400 transition cursor-pointer">Quick Demo</button>
+      <footer className="py-12 bg-stone-900 text-stone-300 text-xs border-t border-stone-800">
+        <div className="max-w-6xl mx-auto px-4 space-y-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-stone-800">
+            {/* Left: Brand & Mission */}
+            <div className="space-y-2 text-center md:text-left">
+              <div className="flex items-center justify-center md:justify-start gap-2">
+                <span className="text-2xl animate-diya">🪔</span>
+                <span className="font-serif text-lg font-bold text-white tracking-wide">
+                  UtsavSetu <span className="text-[#D4AF37]">(उत्सवसेतु)</span>
+                </span>
+              </div>
+              <p className="text-stone-400 text-xs max-w-md leading-relaxed">
+                Empowering Indian families & celebration hosts with smart RSVP tracking, catering accuracy, and royal digital invitations.
+              </p>
+            </div>
+
+            {/* Right: Creator Profile & Socials */}
+            <div className="flex flex-col items-center md:items-end gap-3">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-stone-400">Designed & Developed by</span>
+                <span className="text-amber-300 font-bold font-serif text-sm px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/30 shadow-xs">
+                  Satyam Rai
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <a
+                  href="https://github.com/satyam14102008-design"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-100 border border-stone-700 hover:border-[#D4AF37] transition shadow-xs group"
+                >
+                  <Github className="w-4 h-4 text-stone-300 group-hover:text-white transition" />
+                  <span className="font-medium text-xs">GitHub Profile</span>
+                </a>
+                <a
+                  href="https://www.linkedin.com/in/satyam-rai-65a298386/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#0A66C2]/15 hover:bg-[#0A66C2]/30 text-sky-200 border border-[#0A66C2]/40 hover:border-sky-400 transition shadow-xs group"
+                >
+                  <Linkedin className="w-4 h-4 text-[#0A66C2] group-hover:text-sky-300 transition" />
+                  <span className="font-medium text-xs">LinkedIn Profile</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Copyright & Navigation Links */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-stone-500 text-[11px]">
+            <p>© 2026 UtsavSetu (उत्सवसेतु) • Crafted by Satyam Rai</p>
+            <div className="flex items-center gap-4">
+              <Link to="/login" className="hover:text-white transition">Sign In</Link>
+              <Link to="/register" className="hover:text-white transition">Register</Link>
+              <button onClick={demoLogin} className="hover:text-amber-400 transition cursor-pointer">Quick Demo</button>
+            </div>
           </div>
         </div>
       </footer>

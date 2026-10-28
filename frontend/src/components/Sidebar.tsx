@@ -13,7 +13,9 @@ import {
   Bot,
   FileSpreadsheet,
   Settings,
-  Sparkles
+  Sparkles,
+  Github,
+  Linkedin
 } from 'lucide-react';
 
 interface Props {
@@ -110,11 +112,35 @@ export const Sidebar: React.FC<Props> = ({ isOpen, onClose }) => {
           </nav>
         </div>
 
-        {/* Footer Brand Info */}
-        <div className="p-4 border-t border-stone-100 text-center">
-          <p className="text-[10px] text-stone-400 font-medium">
-            UtsavSetu v1.0 • Indian Celebrations
+        {/* Footer Brand Info & Developer Credit */}
+        <div className="p-3 border-t border-stone-100 text-center space-y-1.5 bg-[#FAF7F2]/50">
+          <p className="text-[10px] text-stone-500 font-medium">
+            UtsavSetu (उत्सवसेतु) • v1.0
           </p>
+          <div className="text-[10px] text-stone-600">
+            Crafted by <span className="font-bold text-[#800020]">Satyam Rai</span>
+          </div>
+          <div className="flex items-center justify-center gap-3 pt-1">
+            <a
+              href="https://github.com/satyam14102008-design"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-stone-400 hover:text-stone-900 transition hover:scale-110"
+              title="Satyam Rai on GitHub"
+            >
+              <Github className="w-3.5 h-3.5" />
+            </a>
+            <span className="text-stone-300">•</span>
+            <a
+              href="https://www.linkedin.com/in/satyam-rai-65a298386/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-stone-400 hover:text-[#0A66C2] transition hover:scale-110"
+              title="Satyam Rai on LinkedIn"
+            >
+              <Linkedin className="w-3.5 h-3.5" />
+            </a>
+          </div>
         </div>
       </aside>
     </>
