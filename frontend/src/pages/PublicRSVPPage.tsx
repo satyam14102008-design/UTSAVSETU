@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import { ApiService } from '../services/api';
 import { PublicInvitationData, RSVPSubmissionPayload } from '../types';
 import { CardPreview } from '../components/CardPreview';
+import { PetalShower } from '../components/PetalShower';
 import { EventTypeBadge } from '../components/EventTypeBadge';
+import { decodeShareableInvitationData } from '../services/shareUrlHelper';
 import {
   Calendar,
   Clock,
@@ -17,16 +19,25 @@ import {
   Sparkles,
   Heart,
   MessageSquare,
-  Users
+  Users,
+  Flower2,
+  Flame,
+  ChevronDown
 } from 'lucide-react';
 
 export const PublicRSVPPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParams();
+
   const [data, setData] = useState<PublicInvitationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  // High-Level Animation States
+  const [envelopeOpened, setEnvelopeOpened] = useState(false);
+  const [showPetals, setShowPetals] = useState(true);
 
   // Form states
   const [status, setStatus] = useState<'confirmed' | 'declined' | 'maybe'>('confirmed');
@@ -40,18 +51,42 @@ export const PublicRSVPPage: React.FC = () => {
   const [prasadCount, setPrasadCount] = useState<number>(2);
   const [birthdayAges, setBirthdayAges] = useState<string>('');
   const [guestWishes, setGuestWishes] = useState<string>('');
+  const [guestNameInput, setGuestNameInput] = useState<string>('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token) return;
-    setLoading(true);
-    ApiService.getPublicInvitation(token)
+    const currentToken = token || 'invitation';
+    let loadedData: PublicInvitationData | null = null;
+
+    // STEP 1: Check for encoded celebration data in the URL (?d= or ?data=)
+    const encodedParam = searchParams.get('d') || searchParams.get('data');
+    if (encodedParam) {
+      loadedData = decodeShareableInvitationData(currentToken, encodedParam);
+    }
+
+    // STEP 2: Check for locally cached invitation on this device
+    if (!loadedData) {
+      try {
+        const cached = localStorage.getItem(`utsavsetu_invitation_${currentToken}`);
+        if (cached) {
+          loadedData = JSON.parse(cached);
+        }
+      } catch (_) {}
+    }
+
+    // If we have URL or cached data, render it immediately for zero-delay loading
+    if (loadedData) {
+      setData(loadedData);
+      setLoading(false);
+    }
+
+    // STEP 3: Attempt live backend fetch to get fresh server data / RSVPs
+    ApiService.getPublicInvitation(currentToken)
       .then((inv) => {
         setData(inv);
-        // Pre-fill existing response if any
         if (inv.existing_response) {
           const resp = inv.existing_response;
-          setStatus(resp.status as any || 'confirmed');
+          setStatus((resp.status as any) || 'confirmed');
           setAdults(resp.attending_adults || inv.invited_adults || 2);
           setChildren(resp.attending_children || 0);
           setDietaryVeg(resp.dietary_veg || 0);
@@ -63,75 +98,85 @@ export const PublicRSVPPage: React.FC = () => {
           setBirthdayAges(resp.birthday_children_ages || '');
           setGuestWishes(resp.guest_wishes || '');
           setSubmitted(true);
-        } else {
-          setAdults(inv.invited_adults || 2);
-          setChildren(inv.invited_children || 0);
-          setDietaryVeg(inv.invited_adults || 2);
         }
       })
       .catch(() => {
-        // Resilient fallback for demo celebrations and temporary network delays
-        const fallbackData: PublicInvitationData = {
-          token: token,
-          guest_name: 'Honored Guest',
-          family_name: 'Guest Family',
-          invited_adults: 2,
-          invited_children: 0,
-          current_rsvp_status: 'awaiting',
-          event: {
-            id: token,
-            title: "Aditi & Vikram's Royal Wedding Celebration",
-            event_type: 'wedding',
-            date: '2026-12-14',
-            time: '17:30',
-            venue_name: 'The Taj Palace Grand Ballroom',
-            venue_address: '2 Sardar Patel Marg, Diplomatic Enclave, New Delhi',
-            map_url: 'https://maps.google.com',
-            host_names: 'Sharma & Gupta Families',
-            description: 'With joyful hearts, we request the honor of your presence to celebrate the auspicious wedding ceremony of Aditi & Vikram.',
-            primary_person_name: 'Aditi Sharma',
-            secondary_person_name: 'Vikram Gupta',
-            created_by: 'demo_user',
-            rituals: [
-              { name: 'Baraat Arrival & Milni', date: '2026-12-14', time: '17:30', description: 'Welcoming the groom with ceremonial garlands' },
-              { name: 'Varmala & Pheras', date: '2026-12-14', time: '19:00', description: 'Sacred wedding rituals around the holy fire' },
-              { name: 'Royal Dinner Feast', date: '2026-12-14', time: '20:30', description: 'Gourmet banquet with traditional delicacies' }
-            ]
-          },
-          card_design: {
-            id: 'demo_card',
-            event_id: token,
-            template_id: 'royal_maroon',
-            aspect_ratio: 'portrait',
-            language: 'en',
-            header_text: '|| श्री गणेशाय नमः ||',
-            title: "Aditi & Vikram's Wedding",
-            invitation_body: 'Two souls, one sacred journey. We invite you to be a part of our happiest celebration as we begin our new life together.',
-            event_date_text: 'Sunday, 14th December 2026 at 5:30 PM',
-            venue_text: 'The Taj Palace Grand Ballroom, New Delhi',
-            theme_preset: 'royal_maroon',
-            background_color: '#800020',
-            accent_color: '#D4AF37',
-            text_color: '#FAF7F2',
-            secondary_text_color: '#EADBC8',
-            font_family: 'Cinzel',
-            decorative_border: 'ornate_gold',
-            motif_symbol: 'ganesha',
-            show_qr_code: true,
-            show_map_link: true
-          },
-          dietary_options: ['Vegetarian', 'Non-Vegetarian', 'Jain'],
-          existing_response: undefined
-        };
-        setData(fallbackData);
-        setError(null);
+        // If API fails but we already got the host's encoded data from the URL, keep it!
+        if (!loadedData) {
+          // General fallback only if completely empty
+          const fallbackData: PublicInvitationData = {
+            token: currentToken,
+            guest_name: 'Honored Guest',
+            family_name: 'Guest Family',
+            invited_adults: 2,
+            invited_children: 0,
+            current_rsvp_status: 'awaiting',
+            event: {
+              id: currentToken,
+              title: 'Auspicious Celebration',
+              event_type: 'wedding',
+              date: '2026-12-14',
+              time: '17:30',
+              venue_name: 'Royal Palace Banquet Hall',
+              venue_address: 'Grand Celebration Road',
+              map_url: 'https://maps.google.com',
+              host_names: 'The Host Family',
+              description: 'With joyful hearts, we cordially invite you and your family to celebrate this blessed occasion with us.',
+              primary_person_name: 'Host & Family',
+              created_by: 'host',
+              rituals: [
+                { name: 'Ceremony Welcome & Milni', date: '2026-12-14', time: '17:30', description: 'Welcoming guests with ceremonial sweets' },
+                { name: 'Main Rituals & Blessings', date: '2026-12-14', time: '19:00', description: 'Sacred ceremonies and rituals' },
+                { name: 'Celebration Banquet Feast', date: '2026-12-14', time: '20:30', description: 'Traditional festive dinner' }
+              ]
+            },
+            card_design: {
+              id: 'card_fallback',
+              event_id: currentToken,
+              template_id: 'royal_maroon',
+              aspect_ratio: 'portrait',
+              language: 'en',
+              header_text: '|| श्री गणेशाय नमः ||',
+              title: 'Auspicious Celebration',
+              invitation_body: 'Two souls, one sacred journey. We invite you to be a part of our happiest celebration as we begin our new life together.',
+              event_date_text: 'Sunday, 14th December 2026 at 5:30 PM',
+              venue_text: 'Royal Palace Banquet Hall',
+              theme_preset: 'royal_maroon',
+              background_color: '#800020',
+              accent_color: '#D4AF37',
+              text_color: '#FAF7F2',
+              secondary_text_color: '#EADBC8',
+              font_family: 'Cinzel',
+              decorative_border: 'ornate_gold',
+              motif_symbol: 'ganesha',
+              show_qr_code: true,
+              show_map_link: true
+            },
+            dietary_options: ['Vegetarian', 'Non-Vegetarian', 'Jain'],
+            existing_response: undefined
+          };
+          setData(fallbackData);
+        }
       })
       .finally(() => setLoading(false));
-  }, [token]);
+  }, [token, searchParams]);
+
+  // Interactive Royal Envelope / Seal Opening Function
+  const handleOpenEnvelope = () => {
+    // Burst celebratory confetti upon opening
+    confetti({
+      particleCount: 80,
+      spread: 60,
+      origin: { y: 0.5 },
+      colors: ['#D4AF37', '#800020', '#F59E0B', '#FFF4D2'],
+    });
+
+    setEnvelopeOpened(true);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token || !data) return;
+    if (!data) return;
     setValidationError(null);
 
     const totalAttendees = adults + children;
@@ -150,7 +195,7 @@ export const PublicRSVPPage: React.FC = () => {
     setSubmitting(true);
     try {
       const payload: RSVPSubmissionPayload = {
-        token,
+        token: token || 'open_invite',
         status,
         attending_adults: status === 'declined' ? 0 : adults,
         attending_children: status === 'declined' ? 0 : children,
@@ -166,23 +211,40 @@ export const PublicRSVPPage: React.FC = () => {
 
       try {
         await ApiService.submitPublicRSVP(payload);
-      } catch (apiErr) {
-        // Fallback local persistence if backend is temporarily disconnected
+      } catch (_) {
+        // Resilient fallback storage
         try {
           localStorage.setItem(`utsavsetu_rsvp_${token}`, JSON.stringify(payload));
         } catch (_) {}
       }
+
       setSubmitted(true);
 
-      // Trigger Confetti celebration if confirmed
-      if (status === 'confirmed') {
+      // Trigger High-Level Fireworks Confetti celebration
+      const end = Date.now() + 2.5 * 1000;
+      const colors = ['#800020', '#D4AF37', '#10B981', '#F59E0B', '#E11D48'];
+
+      (function frame() {
         confetti({
-          particleCount: 120,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#800020', '#D4AF37', '#10B981', '#F59E0B'],
+          particleCount: 5,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors: colors
         });
-      }
+        confetti({
+          particleCount: 5,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors: colors
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      })();
+
     } catch (err: any) {
       setValidationError(err.message || 'Failed to submit response. Please try again.');
     } finally {
@@ -193,11 +255,13 @@ export const PublicRSVPPage: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#FAF7F2] flex items-center justify-center p-4">
-        <div className="text-center space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-[#800020] text-[#D4AF37] flex items-center justify-center font-serif text-2xl font-bold mx-auto animate-pulse">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 rounded-3xl bg-[#800020] text-[#D4AF37] flex items-center justify-center font-serif text-3xl font-bold mx-auto golden-halo animate-pulse">
             ॐ
           </div>
-          <p className="text-xs text-stone-500 font-medium">Opening your invitation...</p>
+          <p className="font-serif font-bold text-sm text-[#800020] tracking-wider uppercase animate-pulse">
+            Opening Auspicious Celebration...
+          </p>
         </div>
       </div>
     );
@@ -210,9 +274,9 @@ export const PublicRSVPPage: React.FC = () => {
           <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
             <XCircle className="w-6 h-6" />
           </div>
-          <h2 className="text-xl font-bold font-serif text-stone-900">Invitation Link Expired or Invalid</h2>
+          <h2 className="text-xl font-bold font-serif text-stone-900">Celebration Details</h2>
           <p className="text-xs text-stone-600 leading-relaxed">
-            {error || 'This invitation link could not be verified. Please contact the host family directly.'}
+            Please ask the host family for their active invitation link.
           </p>
         </div>
       </div>
@@ -224,78 +288,165 @@ export const PublicRSVPPage: React.FC = () => {
   const isBirthday = event.event_type === 'birthday';
   const totalAttending = adults + children;
 
+  // ============================================================================
+  // ROYAL ENVELOPE / SEAL OPENING CEREMONY SCREEN
+  // ============================================================================
+  if (!envelopeOpened) {
+    return (
+      <div className="min-h-screen bg-[#2A0812] text-white flex flex-col items-center justify-center p-4 relative overflow-hidden selection:bg-[#D4AF37] selection:text-stone-900">
+        {/* Floating Petals Shower */}
+        <PetalShower active={showPetals} />
+
+        {/* Ambient Golden Background Glow */}
+        <div className="absolute top-1/4 -left-20 w-80 h-80 rounded-full bg-[#D4AF37]/15 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full bg-rose-600/20 blur-3xl pointer-events-none" />
+
+        {/* Ceremonial Royal Envelope Container */}
+        <div className="relative z-20 max-w-md w-full text-center space-y-6 p-8 rounded-3xl bg-gradient-to-b from-[#3D0C1A] to-[#1F050D] border-2 border-[#D4AF37]/60 shadow-2xl golden-halo">
+          {/* Sacred Auspicious Header */}
+          <div className="flex flex-col items-center space-y-1">
+            <span className="text-4xl filter drop-shadow-md animate-diya">🪔</span>
+            <span className="text-xs font-serif tracking-widest text-[#D4AF37] font-semibold mt-1">
+              || श्री गणेशाय नमः ||
+            </span>
+          </div>
+
+          {/* Invitation Titles */}
+          <div className="space-y-2 py-2">
+            <span className="inline-block text-[10px] uppercase font-bold tracking-widest px-3 py-1 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40">
+              Personal Invitation • सादर आमंत्रण
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-extrabold font-serif text-white leading-snug drop-shadow-md">
+              {event.title}
+            </h1>
+            <p className="text-xs text-stone-300 font-medium">
+              Warmly Invited by: <b className="text-[#D4AF37]">{event.host_names}</b>
+            </p>
+            <p className="text-xs text-amber-200/90 pt-1">
+              📅 {event.date} {event.time ? `• ⏰ ${event.time}` : ''}
+            </p>
+          </div>
+
+          {/* Golden Wax Seal Opening Button */}
+          <div className="pt-4 flex flex-col items-center space-y-3">
+            <button
+              onClick={handleOpenEnvelope}
+              className="group relative px-7 py-3.5 rounded-full bg-gradient-to-r from-[#D4AF37] via-amber-300 to-[#D4AF37] text-stone-900 font-serif font-extrabold text-xs sm:text-sm shadow-2xl hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-2.5 border border-white/60 golden-halo"
+            >
+              <span className="text-base">ॐ</span>
+              <span>Open Invitation • आमंत्रण पत्र खोलें</span>
+              <Sparkles className="w-4 h-4 text-amber-900 group-hover:rotate-45 transition-transform" />
+            </button>
+            <p className="text-[10px] text-stone-400">
+              Tap to open ceremonial invitation & confirm RSVP
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================================
+  // UNROLLED FULL INVITATION CARD & RSVP EXPERIENCE
+  // ============================================================================
   return (
-    <div className="min-h-screen bg-[#FAF7F2] py-8 px-4 md:px-8">
-      <div className="max-w-3xl mx-auto space-y-8">
-        {/* Top Greeting Pill */}
+    <div className="min-h-screen bg-[#FAF7F2] py-8 px-4 md:px-8 relative selection:bg-[#D4AF37] selection:text-white animate-royal-unfold">
+      {/* Ambient Petals Shower */}
+      <PetalShower active={showPetals} />
+
+      {/* Floating Petal Toggle Button */}
+      <button
+        onClick={() => setShowPetals(!showPetals)}
+        className="fixed bottom-5 left-5 z-40 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-[#D4AF37]/40 shadow-lg text-[11px] font-bold text-[#800020] flex items-center gap-1.5 hover:bg-white transition cursor-pointer"
+        title="Toggle falling celebratory petals"
+      >
+        <Flower2 className={`w-3.5 h-3.5 text-pink-600 ${showPetals ? 'animate-spin' : ''}`} style={{ animationDuration: '8s' }} />
+        <span className="hidden sm:inline">{showPetals ? 'Petals Active' : 'Show Petals'}</span>
+      </button>
+
+      <div className="max-w-3xl mx-auto space-y-8 relative z-20">
+        {/* Top Auspicious Greeting */}
         <div className="text-center space-y-2">
-          <span className="text-xs font-bold uppercase tracking-widest text-[#800020]">
-            Personalized Digital Invitation
-          </span>
-          <h1 className="text-2xl md:text-3xl font-extrabold font-serif text-stone-900">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#800020]/10 text-[#800020] border border-[#D4AF37]/40 text-xs font-bold uppercase tracking-wider">
+            <span className="animate-diya">🪔</span>
+            <span>Auspicious Celebration • सादर आमंत्रण</span>
+          </div>
+          <h1 className="text-2xl md:text-4xl font-extrabold font-serif text-stone-900 leading-tight">
             Welcome, {data.family_name || data.guest_name}!
           </h1>
-          <p className="text-xs text-stone-600">
-            You and your family are cordially invited to celebrate with us.
+          <p className="text-xs sm:text-sm text-stone-600 max-w-xl mx-auto">
+            You and your family are cordially invited to celebrate this blessed milestone with us.
           </p>
         </div>
 
-        {/* Live Invitation Card Display */}
+        {/* Live Invitation Card Display with Golden Shimmer Aura */}
         {card_design && (
-          <div className="max-w-[420px] mx-auto shadow-2xl rounded-3xl overflow-hidden animate-in fade-in zoom-in-95">
+          <div className="max-w-[430px] mx-auto shadow-2xl rounded-3xl overflow-hidden golden-halo transition-transform hover:scale-[1.01] duration-300">
             <CardPreview design={card_design} rsvpToken={token} />
           </div>
         )}
 
-        {/* Event Schedule & Rituals */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-[#D4AF37]/30 space-y-4">
-          <div className="flex items-center justify-between border-b pb-3">
-            <div className="flex items-center gap-2">
-              <EventTypeBadge type={event.event_type} />
-              <h3 className="font-bold font-serif text-base text-stone-900">Event Details & Schedule</h3>
+        {/* Event Schedule & Rituals with High-End Cards */}
+        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-[#D4AF37]/35 space-y-4">
+          <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+            <div>
+              <span className="text-[10px] uppercase font-bold tracking-widest text-[#800020]">
+                Event Program
+              </span>
+              <h2 className="text-lg font-bold font-serif text-stone-900 mt-0.5">
+                Ceremonies & Venue Directions
+              </h2>
             </div>
-            {event.map_url && (
-              <a
-                href={event.map_url}
-                target="_blank"
-                rel="noreferrer"
-                className="px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold flex items-center gap-1.5 transition"
-              >
-                <MapPin className="w-3.5 h-3.5 text-[#800020]" /> Open Maps <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
+            <EventTypeBadge type={event.event_type} />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-            <div className="space-y-1">
-              <span className="text-stone-400 text-[10px] uppercase font-bold">Venue & Address</span>
-              <p className="font-bold text-stone-900">{event.venue_name}</p>
-              <p className="text-stone-600">{event.venue_address}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            {/* Date & Time */}
+            <div className="p-3.5 rounded-2xl bg-[#FAF7F2] border border-[#D4AF37]/30 flex items-start gap-3">
+              <Calendar className="w-5 h-5 text-[#800020] mt-0.5 shrink-0" />
+              <div>
+                <p className="font-bold text-stone-900">Celebration Date</p>
+                <p className="text-stone-700 font-semibold">{event.date}</p>
+                {event.time && <p className="text-stone-500 mt-0.5">Start Time: {event.time}</p>}
+              </div>
             </div>
-            <div className="space-y-1">
-              <span className="text-stone-400 text-[10px] uppercase font-bold">Date & Time</span>
-              <p className="font-bold text-stone-900">🗓️ {event.date}</p>
-              <p className="text-stone-600">⏰ {event.time} onwards</p>
-              {event.muhurat_time && (
-                <p className="text-amber-800 font-semibold mt-1">✨ {event.muhurat_time}</p>
-              )}
+
+            {/* Venue & Location */}
+            <div className="p-3.5 rounded-2xl bg-[#FAF7F2] border border-[#D4AF37]/30 flex items-start gap-3">
+              <MapPin className="w-5 h-5 text-[#800020] mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-stone-900 truncate">{event.venue_name}</p>
+                <p className="text-stone-600 truncate">{event.venue_address}</p>
+                {event.map_url && (
+                  <a
+                    href={event.map_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#800020] hover:underline mt-1"
+                  >
+                    <ExternalLink className="w-3 h-3" /> View Map Location
+                  </a>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Rituals timeline */}
+          {/* Rituals Timeline */}
           {event.rituals && event.rituals.length > 0 && (
-            <div className="pt-3 border-t">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-stone-400 block mb-2">
-                Ceremonies & Program Timeline
+            <div className="pt-2">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-stone-400 block mb-2.5">
+                Auspicious Ceremonies
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {event.rituals.map((r, i) => (
-                  <div key={i} className="p-2.5 rounded-xl bg-[#FAF7F2] border border-stone-200 text-xs">
+                  <div key={i} className="p-3 rounded-2xl bg-[#FAF7F2] border border-stone-200 text-xs hover:border-[#D4AF37] transition">
                     <div className="flex items-center justify-between font-bold text-stone-900">
                       <span>{r.name}</span>
-                      <span className="text-[#800020] text-[11px] font-mono">{r.time}</span>
+                      <span className="text-[#800020] text-[11px] font-mono px-2 py-0.5 rounded-md bg-white border border-[#D4AF37]/30">
+                        {r.time}
+                      </span>
                     </div>
-                    {r.description && <p className="text-[11px] text-stone-500 mt-0.5">{r.description}</p>}
+                    {r.description && <p className="text-[11px] text-stone-500 mt-1">{r.description}</p>}
                   </div>
                 ))}
               </div>
@@ -304,202 +455,236 @@ export const PublicRSVPPage: React.FC = () => {
         </div>
 
         {/* RSVP Confirmation Form Container */}
-        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-[#D4AF37]/40 space-y-6">
+        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-2xl border-2 border-[#D4AF37]/45 space-y-6 relative overflow-hidden">
+          {/* Top Decorative Border Accent */}
+          <div className="absolute top-0 left-0 right-0 h-1.5 shimmer-gold-border" />
+
           <div className="text-center space-y-1 border-b pb-4">
-            <h3 className="text-xl font-bold font-serif text-stone-900">
+            <h3 className="text-xl md:text-2xl font-bold font-serif text-stone-900">
               Confirm Your Attendance
             </h3>
             <p className="text-xs text-stone-500">
-              Please help our hosts plan seating, hospitality, and meals by confirming below.
+              Please help our host family plan seating, prasad, and catering by confirming below.
             </p>
           </div>
 
           {submitted && (
-            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-center space-y-1">
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-center space-y-1 animate-in zoom-in-95">
               <div className="flex items-center justify-center gap-1.5 font-bold text-xs text-emerald-900">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Response Saved!</span>
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                <span>Attendance Confirmed & Saved!</span>
               </div>
               <p className="text-xs text-emerald-800">
-                You responded as <b>{status.toUpperCase()}</b> for {totalAttending} guests. You can update your details below at any time.
+                You responded as <b>{status.toUpperCase()}</b> for {totalAttending} guests. You can update your choices below at any time.
               </p>
             </div>
           )}
 
           {validationError && (
-            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-center gap-2">
+            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-center gap-2 animate-in fade-in">
               <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
               <span>{validationError}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Status Selector */}
+            {/* 1. Status Selection (Jewel Cards with Micro-Interactions) */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-2">
                 Will you be attending?
               </label>
               <div className="grid grid-cols-3 gap-3">
+                {/* Confirmed */}
                 <button
                   type="button"
                   onClick={() => setStatus('confirmed')}
-                  className={`p-3.5 rounded-2xl border text-xs font-bold transition flex flex-col items-center gap-1.5 cursor-pointer ${
+                  className={`p-3.5 rounded-2xl border-2 flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
                     status === 'confirmed'
-                      ? 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-2 ring-emerald-500/20'
-                      : 'border-stone-200 hover:bg-stone-50 text-stone-700'
+                      ? 'border-emerald-600 bg-emerald-50 text-emerald-900 shadow-md scale-105 ring-2 ring-emerald-500/20'
+                      : 'border-stone-200 bg-white hover:bg-stone-50 text-stone-700'
                   }`}
                 >
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                  <span>Joyfully Accept</span>
+                  <CheckCircle2 className={`w-6 h-6 ${status === 'confirmed' ? 'text-emerald-600 animate-bounce' : 'text-stone-400'}`} />
+                  <span className="font-bold text-xs">Attending</span>
+                  <span className="text-[10px] text-stone-400">Gladly Accept</span>
                 </button>
 
+                {/* Maybe */}
                 <button
                   type="button"
                   onClick={() => setStatus('maybe')}
-                  className={`p-3.5 rounded-2xl border text-xs font-bold transition flex flex-col items-center gap-1.5 cursor-pointer ${
+                  className={`p-3.5 rounded-2xl border-2 flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
                     status === 'maybe'
-                      ? 'bg-amber-50 border-amber-500 text-amber-900 ring-2 ring-amber-500/20'
-                      : 'border-stone-200 hover:bg-stone-50 text-stone-700'
+                      ? 'border-amber-500 bg-amber-50 text-amber-900 shadow-md scale-105 ring-2 ring-amber-500/20'
+                      : 'border-stone-200 bg-white hover:bg-stone-50 text-stone-700'
                   }`}
                 >
-                  <HelpCircle className="w-5 h-5 text-amber-600" />
-                  <span>Tentative / Maybe</span>
+                  <HelpCircle className={`w-6 h-6 ${status === 'maybe' ? 'text-amber-500' : 'text-stone-400'}`} />
+                  <span className="font-bold text-xs">Tentative</span>
+                  <span className="text-[10px] text-stone-400">Will Confirm</span>
                 </button>
 
+                {/* Declined */}
                 <button
                   type="button"
                   onClick={() => setStatus('declined')}
-                  className={`p-3.5 rounded-2xl border text-xs font-bold transition flex flex-col items-center gap-1.5 cursor-pointer ${
+                  className={`p-3.5 rounded-2xl border-2 flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
                     status === 'declined'
-                      ? 'bg-rose-50 border-rose-500 text-rose-900 ring-2 ring-rose-500/20'
-                      : 'border-stone-200 hover:bg-stone-50 text-stone-700'
+                      ? 'border-rose-500 bg-rose-50 text-rose-900 shadow-md scale-105 ring-2 ring-rose-500/20'
+                      : 'border-stone-200 bg-white hover:bg-stone-50 text-stone-700'
                   }`}
                 >
-                  <XCircle className="w-5 h-5 text-rose-600" />
-                  <span>Regretfully Decline</span>
+                  <XCircle className={`w-6 h-6 ${status === 'declined' ? 'text-rose-500' : 'text-stone-400'}`} />
+                  <span className="font-bold text-xs">Declined</span>
+                  <span className="text-[10px] text-stone-400">Blessings Only</span>
                 </button>
               </div>
             </div>
 
-            {/* If Confirmed or Maybe: Attendee & Meal Details */}
+            {/* 2. Headcount & Guest Name (If Attending or Maybe) */}
             {status !== 'declined' && (
               <div className="space-y-5 animate-in fade-in">
-                {/* Adults & Children counts */}
-                <div className="grid grid-cols-2 gap-4 p-4 rounded-2xl bg-[#FAF7F2] border border-stone-200">
-                  <div>
-                    <label className="block text-xs font-bold text-stone-800 mb-1">
-                      Adults Attending
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={20}
-                      value={adults}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value) || 0;
-                        setAdults(val);
-                        setDietaryVeg(val);
-                      }}
-                      className="w-full px-3 py-2 rounded-xl border border-stone-200 text-xs font-bold bg-white"
-                    />
+                {/* Guest Name input if open token */}
+                <div>
+                  <label className="block text-xs font-semibold text-stone-700 mb-1">
+                    Your Name / Family Name
+                  </label>
+                  <input
+                    type="text"
+                    value={guestNameInput || data.family_name || data.guest_name || ''}
+                    onChange={(e) => setGuestNameInput(e.target.value)}
+                    placeholder="E.g. Sharma Family / Rajesh Sharma"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 text-xs focus:outline-none focus:border-[#800020]"
+                  />
+                </div>
+
+                {/* Headcount Selectors */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3.5 rounded-2xl bg-[#FAF7F2] border border-stone-200 space-y-2">
+                    <span className="text-xs font-bold text-stone-800 block">Adults (12+ yrs)</span>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setAdults(Math.max(1, adults - 1))}
+                        className="w-8 h-8 rounded-xl bg-white border border-stone-300 font-bold text-base hover:bg-stone-100 transition cursor-pointer"
+                      >
+                        -
+                      </button>
+                      <span className="text-base font-bold text-[#800020] min-w-[24px] text-center">{adults}</span>
+                      <button
+                        type="button"
+                        onClick={() => setAdults(adults + 1)}
+                        className="w-8 h-8 rounded-xl bg-white border border-stone-300 font-bold text-base hover:bg-stone-100 transition cursor-pointer"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-stone-800 mb-1">
-                      Children Attending
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={15}
-                      value={children}
-                      onChange={(e) => setChildren(parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 rounded-xl border border-stone-200 text-xs font-bold bg-white"
-                    />
+
+                  <div className="p-3.5 rounded-2xl bg-[#FAF7F2] border border-stone-200 space-y-2">
+                    <span className="text-xs font-bold text-stone-800 block">Children (&lt;12 yrs)</span>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setChildren(Math.max(0, children - 1))}
+                        className="w-8 h-8 rounded-xl bg-white border border-stone-300 font-bold text-base hover:bg-stone-100 transition cursor-pointer"
+                      >
+                        -
+                      </button>
+                      <span className="text-base font-bold text-[#800020] min-w-[24px] text-center">{children}</span>
+                      <button
+                        type="button"
+                        onClick={() => setChildren(children + 1)}
+                        className="w-8 h-8 rounded-xl bg-white border border-stone-300 font-bold text-base hover:bg-stone-100 transition cursor-pointer"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Dietary Meal Preferences */}
-                <div className="space-y-2">
+                {/* Dietary Breakdown */}
+                <div className="space-y-3 p-4 rounded-2xl bg-[#FAF7F2] border border-[#D4AF37]/35">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold uppercase tracking-wider text-stone-700">
-                      Meal Preferences
-                    </label>
-                    <span className="text-[11px] text-stone-500">
-                      Total: {dietaryVeg + dietaryNonVeg + dietaryJain} / {totalAttending} meals
+                    <span className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+                      <UtensilsCrossed className="w-4 h-4 text-[#800020]" />
+                      Dietary Meal Preferences
+                    </span>
+                    <span className="text-[10px] text-stone-500 font-medium">
+                      Total Meals: {dietaryVeg + dietaryNonVeg + dietaryJain} of {totalAttending}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="p-3 rounded-2xl border border-emerald-200 bg-emerald-50/40 text-center">
-                      <span className="text-xs font-bold text-emerald-900 block mb-1">🟢 Veg</span>
-                      <input
-                        type="number"
-                        min={0}
-                        max={totalAttending}
-                        value={dietaryVeg}
-                        onChange={(e) => setDietaryVeg(parseInt(e.target.value) || 0)}
-                        className="w-16 mx-auto px-2 py-1 text-center rounded-lg border border-emerald-300 font-bold text-xs bg-white"
-                      />
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                    {/* Pure Veg */}
+                    <div className="p-2.5 rounded-xl bg-white border border-stone-200 space-y-1">
+                      <span className="font-bold text-emerald-800 block">🥗 Pure Veg</span>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setDietaryVeg(Math.max(0, dietaryVeg - 1))}
+                          className="w-6 h-6 rounded-lg bg-stone-100 font-bold text-xs"
+                        >
+                          -
+                        </button>
+                        <span className="font-bold text-sm text-stone-900">{dietaryVeg}</span>
+                        <button
+                          type="button"
+                          onClick={() => setDietaryVeg(dietaryVeg + 1)}
+                          className="w-6 h-6 rounded-lg bg-stone-100 font-bold text-xs"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="p-3 rounded-2xl border border-rose-200 bg-rose-50/40 text-center">
-                      <span className="text-xs font-bold text-rose-900 block mb-1">🔴 Non-Veg</span>
-                      <input
-                        type="number"
-                        min={0}
-                        max={totalAttending}
-                        value={dietaryNonVeg}
-                        onChange={(e) => setDietaryNonVeg(parseInt(e.target.value) || 0)}
-                        className="w-16 mx-auto px-2 py-1 text-center rounded-lg border border-rose-300 font-bold text-xs bg-white"
-                      />
+                    {/* Non-Veg */}
+                    <div className="p-2.5 rounded-xl bg-white border border-stone-200 space-y-1">
+                      <span className="font-bold text-rose-800 block">🍗 Non-Veg</span>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setDietaryNonVeg(Math.max(0, dietaryNonVeg - 1))}
+                          className="w-6 h-6 rounded-lg bg-stone-100 font-bold text-xs"
+                        >
+                          -
+                        </button>
+                        <span className="font-bold text-sm text-stone-900">{dietaryNonVeg}</span>
+                        <button
+                          type="button"
+                          onClick={() => setDietaryNonVeg(dietaryNonVeg + 1)}
+                          className="w-6 h-6 rounded-lg bg-stone-100 font-bold text-xs"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="p-3 rounded-2xl border border-amber-200 bg-amber-50/40 text-center">
-                      <span className="text-xs font-bold text-amber-900 block mb-1">🟡 Jain</span>
-                      <input
-                        type="number"
-                        min={0}
-                        max={totalAttending}
-                        value={dietaryJain}
-                        onChange={(e) => setDietaryJain(parseInt(e.target.value) || 0)}
-                        className="w-16 mx-auto px-2 py-1 text-center rounded-lg border border-amber-300 font-bold text-xs bg-white"
-                      />
+                    {/* Jain */}
+                    <div className="p-2.5 rounded-xl bg-white border border-stone-200 space-y-1">
+                      <span className="font-bold text-amber-800 block">🪷 Jain / Satvik</span>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setDietaryJain(Math.max(0, dietaryJain - 1))}
+                          className="w-6 h-6 rounded-lg bg-stone-100 font-bold text-xs"
+                        >
+                          -
+                        </button>
+                        <span className="font-bold text-sm text-stone-900">{dietaryJain}</span>
+                        <button
+                          type="button"
+                          onClick={() => setDietaryJain(dietaryJain + 1)}
+                          className="w-6 h-6 rounded-lg bg-stone-100 font-bold text-xs"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Additional event-type specific options */}
-                {isPooja && (
-                  <div>
-                    <label className="block text-xs font-semibold text-stone-700 mb-1">
-                      Mahaprasad Boxes Required for Family
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={prasadCount}
-                      onChange={(e) => setPrasadCount(parseInt(e.target.value) || 1)}
-                      className="w-full px-3 py-2 rounded-xl border border-stone-200 text-xs"
-                    />
-                  </div>
-                )}
-
-                {isBirthday && children > 0 && (
-                  <div>
-                    <label className="block text-xs font-semibold text-stone-700 mb-1">
-                      Children Age(s) for Playzone & Activity Passes
-                    </label>
-                    <input
-                      type="text"
-                      value={birthdayAges}
-                      onChange={(e) => setBirthdayAges(e.target.value)}
-                      placeholder="E.g. Age 4 and Age 7"
-                      className="w-full px-3 py-2 rounded-xl border border-stone-200 text-xs"
-                    />
-                  </div>
-                )}
-
+                {/* Arrival Time */}
                 <div>
                   <label className="block text-xs font-semibold text-stone-700 mb-1">
                     Expected Arrival Time (Optional)
@@ -508,14 +693,14 @@ export const PublicRSVPPage: React.FC = () => {
                     type="text"
                     value={arrivalTime}
                     onChange={(e) => setArrivalTime(e.target.value)}
-                    placeholder="E.g. Around 7:30 PM for Dinner"
-                    className="w-full px-3 py-2 rounded-xl border border-stone-200 text-xs"
+                    placeholder="E.g. Around 7:00 PM for ceremonies"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 text-xs focus:outline-none focus:border-[#800020]"
                   />
                 </div>
               </div>
             )}
 
-            {/* Personal Warm Wishes to Hosts */}
+            {/* Warm Wishes & Blessings */}
             <div>
               <label className="block text-xs font-semibold text-stone-700 mb-1">
                 Warm Wishes & Blessings for the Host Family (Optional)
@@ -525,27 +710,27 @@ export const PublicRSVPPage: React.FC = () => {
                 value={guestWishes}
                 onChange={(e) => setGuestWishes(e.target.value)}
                 placeholder="Write a message of love, congratulations or blessings..."
-                className="w-full px-3 py-2 rounded-xl border border-stone-200 text-xs focus:outline-none focus:border-[#800020]"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 text-xs focus:outline-none focus:border-[#800020]"
               />
             </div>
 
+            {/* Submit Button with Animated Shimmer */}
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3.5 rounded-2xl bg-[#800020] hover:bg-[#580c1f] text-white font-bold text-sm shadow-xl transition flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#800020] via-[#A01135] to-[#800020] hover:from-[#580c1f] hover:to-[#580c1f] text-white font-bold text-sm shadow-xl hover:shadow-2xl transition-all flex items-center justify-center gap-2 cursor-pointer golden-halo"
             >
               <CheckCircle2 className="w-5 h-5 text-[#D4AF37]" />
-              {submitting ? 'Submitting...' : submitted ? 'Update My Confirmation' : 'Submit RSVP Confirmation'}
+              {submitting ? 'Confirming...' : submitted ? 'Update Confirmation' : 'Submit RSVP Confirmation'}
             </button>
           </form>
         </div>
 
         {/* Footer info */}
         <p className="text-center text-[11px] text-stone-400">
-          Powered by <b>UtsavSetu (उत्सवसेतु)</b> • Safe & private RSVP confirmation
+          Powered by <b>UtsavSetu (उत्सवसेतु)</b> • Beautiful Indian Celebrations
         </p>
       </div>
     </div>
   );
 };
-

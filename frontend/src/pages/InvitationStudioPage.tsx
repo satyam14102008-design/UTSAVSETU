@@ -606,6 +606,7 @@ export const InvitationStudioPage: React.FC = () => {
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
         event={activeEvent}
+        cardDesign={design}
       />
     </div>
   );

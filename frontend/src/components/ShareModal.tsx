@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { EventItem } from '../types';
+import { EventItem, CardDesign } from '../types';
 import { useToast } from '../context/ToastContext';
+import { generateShareableInvitationUrl } from '../services/shareUrlHelper';
 import {
   X,
   Share2,
@@ -17,6 +18,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   event: EventItem;
+  cardDesign?: CardDesign | null;
   rsvpToken?: string;
   guestName?: string;
 }
@@ -25,6 +27,7 @@ export const ShareModal: React.FC<Props> = ({
   isOpen,
   onClose,
   event,
+  cardDesign,
   rsvpToken,
   guestName,
 }) => {
@@ -35,8 +38,7 @@ export const ShareModal: React.FC<Props> = ({
 
   // Base URL calculation (works on localhost and production Vercel)
   const origin = window.location.origin;
-  const targetToken = rsvpToken || event?.id || 'token_verma_wedding_2026';
-  const inviteLink = `${origin}/rsvp/${targetToken}`;
+  const inviteLink = generateShareableInvitationUrl(origin, event, cardDesign, rsvpToken);
 
   const greeting = guestName ? `Namaste ${guestName} Ji!` : 'Namaste!';
 

@@ -18,6 +18,7 @@ import {
   Share2
 } from 'lucide-react';
 import { ShareModal } from '../components/ShareModal';
+import { generateShareableInvitationUrl } from '../services/shareUrlHelper';
 
 export const InvitationsWhatsAppPage: React.FC = () => {
   const { activeEvent } = useEvent();
@@ -222,7 +223,7 @@ export const InvitationsWhatsAppPage: React.FC = () => {
             {assignments.map((a) => {
               const cleanDigits = a.phone.replace(/[^0-9]/g, '');
               const formattedPhone = cleanDigits.length === 10 ? `91${cleanDigits}` : cleanDigits;
-              const sampleUrl = `${window.location.origin}/rsvp/${a.rsvp_token}`;
+              const sampleUrl = generateShareableInvitationUrl(window.location.origin, activeEvent, null, a.rsvp_token);
               const prefilledMsg = `Namaste ${a.primary_name} ji! 🙏✨\n\nYou and your family are warmly invited to:\n*${activeEvent.title}*\n\n📅 Date: ${activeEvent.date}\n📍 Venue: ${activeEvent.venue_name}\n\nPlease confirm your attendance & meal preferences here:\n👉 ${sampleUrl}`;
               const waLink = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(prefilledMsg)}`;
 
