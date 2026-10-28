@@ -185,6 +185,36 @@
   animation: sunburstRotate 20s linear infinite;
 }
 
+/* 7. Gentle Floating Levitation */
+@keyframes floatGentle {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(0.8deg);
+  }
+}
+
+.animate-float {
+  animation: floatGentle 5s ease-in-out infinite;
+}
+
+/* 8. Pulsing Glow Tag */
+@keyframes badgeGlowPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 8px 25px rgba(212, 175, 55, 0.55);
+  }
+}
+
+.animate-badge-glow {
+  animation: badgeGlowPulse 3s ease-in-out infinite;
+}
+
 /* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
